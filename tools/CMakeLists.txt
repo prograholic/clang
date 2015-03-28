@@ -21,3 +21,4 @@ endif()
 # to keep the primary Clang repository small and focused.
 # It also may be included by LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR.
 add_llvm_external_project(clang-tools-extra extra)
+add_llvm_external_project(odr-check odr-check)
