@@ -56,7 +56,6 @@ add_clang_library(clangAST
   TypePrinter.cpp
   VTableBuilder.cpp
   VTTBuilder.cpp
-  StructuralEquivalence.cpp
 
   LINK_LIBS
   clangBasic
