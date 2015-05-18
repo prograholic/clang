@@ -105,7 +105,10 @@ static const StaticDiagInfoRec *GetDiagInfo(unsigned DiagID) {
              "Diag ID conflict, the enums at the start of clang::diag (in "
              "DiagnosticIDs.h) probably need to be increased");
 
-      assert(StaticDiagInfo[i-1] < StaticDiagInfo[i] &&
+      const StaticDiagInfoRec& prev = StaticDiagInfo[i-1];
+      const StaticDiagInfoRec& curr = StaticDiagInfo[i];
+
+      assert(prev < curr &&
              "Improperly sorted diag info");
     }
     IsFirst = false;
@@ -666,7 +669,7 @@ bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag) const {
       ++Diag.NumErrors;
     }
 
-    // If we've emitted a lot of errors, emit a fatal error instead of it to 
+    // If we've emitted a lot of errors, emit a fatal error instead of it to
     // stop a flood of bogus errors.
     if (Diag.ErrorLimit && Diag.NumErrors > Diag.ErrorLimit &&
         DiagLevel == DiagnosticIDs::Error) {

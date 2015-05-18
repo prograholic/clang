@@ -202,6 +202,9 @@ def err_odr_field_type_inconsistent : Error<
   "field %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;
 
+def err_odr_missing_attribute : Error<"attribute %0 is missing">;
+def note_odr_attribute : Note<"attribute %0 here">;
+
 // Importing Objective-C ASTs
 def err_odr_ivar_type_inconsistent : Error<
   "instance variable %0 declared with incompatible types in different "
