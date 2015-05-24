@@ -296,9 +296,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (Attr1->getKind() != Attr2->getKind()) {
     if (Context.Complain) {
       Context.Diag2(Attr2->getLocation(), diag::warn_odr_tag_type_inconsistent)
-        << Attr2->getSpelling();
+        << Attr2;
       Context.Diag1(Attr1->getLocation(), diag::note_odr_tag_kind_here)
-        << Attr1->getSpelling();
+        << Attr1;
     }
     return false;
   }
@@ -1350,20 +1350,20 @@ bool StructuralEquivalenceContext::Finish() {
         Equivalent = false;
         if (Complain) {
           Diag2(D2->getLocation(), diag::err_odr_missing_attribute)
-            << D1Attr->getSpelling();
+            << D1Attr;
           Diag1(D1Attr->getLocation(), diag::note_odr_attribute)
-            << D1Attr->getSpelling();
+            << D1Attr;
         }
       }
 
       if (D2AttrIt != D2->attr_end()) {
-        Attr *D2Attr = *D1AttrIt;
+        Attr *D2Attr = *D2AttrIt;
         Equivalent = false;
         if (Complain) {
           Diag2(D2Attr->getLocation(), diag::err_odr_missing_attribute)
-            << D2Attr->getSpelling();
+            << D2Attr;
           Diag1(D1->getLocation(), diag::note_odr_attribute)
-            << D2Attr->getSpelling();
+            << D2Attr;
         }
       }
     }
@@ -2050,6 +2050,21 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     }
     if (!Bases.empty())
       ToCXX->setBases(Bases.data(), Bases.size());
+  }
+
+  // FIXME: prograholic: Actually this is incorrect assert,
+  // because we may process Decl without attributes twice (however such case is not a problem)
+  assert(!To->hasAttrs() && "multiple import is not allowed");
+
+  AttrVec ToAttrs;
+  for (Attr* FromAttr : From->attrs()) {
+    Attr* ToAttr = FromAttr->clone(Importer.getToContext());
+    if (ToAttr) {
+      ToAttrs.push_back(ToAttr);
+    }
+  }
+  if (!ToAttrs.empty()) {
+    To->setAttrs(ToAttrs);
   }
 
   if (shouldForceImportDeclContext(Kind))

@@ -775,10 +775,16 @@ def Malloc : InheritableAttr {
 
 def MaxFieldAlignment : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
-  let Spellings = [];
+  // FIXME: prograholic: we need this attribute name (or ID, whatever) for emitting information about incorrect attributes while importing Decl
+  let Spellings = [Pragma<"", "pack">];
   let Args = [UnsignedArgument<"Alignment">];
   let SemaHandler = 0;
   let Documentation = [Undocumented];
+  let AdditionalMembers = [{
+  void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+    OS << '(' << alignment << ')';
+  }
+  }];
 }
 
 def MayAlias : InheritableAttr {
