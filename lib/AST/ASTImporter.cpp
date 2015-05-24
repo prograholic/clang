@@ -290,18 +290,39 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     Decl *D1,
+                                     Decl *D2,
                                      Attr *Attr1,
                                      Attr *Attr2) {
 
   if (Attr1->getKind() != Attr2->getKind()) {
     if (Context.Complain) {
-      Context.Diag2(Attr2->getLocation(), diag::warn_odr_tag_type_inconsistent)
-        << Attr2;
-      Context.Diag1(Attr1->getLocation(), diag::note_odr_tag_kind_here)
-        << Attr1;
+      Context.Diag2(D2->getLocation(), diag::err_odr_attribute_inconsistent)
+        << Attr2 << Attr1;
+      Context.Diag1(D1->getLocation(), diag::note_odr_attribute_here) << Attr1;
     }
     return false;
   }
+
+  if (MaxFieldAlignmentAttr *MFAttr1 = dyn_cast<MaxFieldAlignmentAttr>(Attr1)) {
+    MaxFieldAlignmentAttr *MFAttr2 = dyn_cast<MaxFieldAlignmentAttr>(Attr2);
+
+    RecordDecl *RD2 = dyn_cast<RecordDecl>(D2);
+    assert(RD2 && "alignment attribute can be applied only to records");
+
+    if (MFAttr1->getAlignment() != MFAttr2->getAlignment()) {
+      if (Context.Complain) {
+        Context.Diag2(D2->getLocation(), diag::err_odr_max_field_alignment_attribute_inconsistent)
+          << RD2 << Attr2 << MFAttr2->getAlignment() << MFAttr1->getAlignment();
+        Context.Diag1(D1->getLocation(), diag::note_odr_attribute_here) << Attr1;
+      }
+      return false;
+    }
+  } else {
+    // TODO: prograholic: check other attributes for equivalence
+    assert(0 && "check other attributes for equivalence");
+  }
+
 
   return true;
 }
@@ -1339,7 +1360,7 @@ bool StructuralEquivalenceContext::Finish() {
     Decl::attr_iterator D2AttrIt = D2->attr_begin();
 
     for ( ; (D1AttrIt != D1->attr_end() && D2AttrIt != D2->attr_end()); ++D1AttrIt, ++D2AttrIt) {
-      if (!::IsStructurallyEquivalent(*this, *D1AttrIt, *D2AttrIt)) {
+      if (!::IsStructurallyEquivalent(*this, D1, D2, *D1AttrIt, *D2AttrIt)) {
         Equivalent = false;
       }
     }
@@ -1351,7 +1372,7 @@ bool StructuralEquivalenceContext::Finish() {
         if (Complain) {
           Diag2(D2->getLocation(), diag::err_odr_missing_attribute)
             << D1Attr;
-          Diag1(D1Attr->getLocation(), diag::note_odr_attribute)
+          Diag1(D1->getLocation(), diag::note_odr_attribute_here)
             << D1Attr;
         }
       }
@@ -1360,9 +1381,9 @@ bool StructuralEquivalenceContext::Finish() {
         Attr *D2Attr = *D2AttrIt;
         Equivalent = false;
         if (Complain) {
-          Diag2(D2Attr->getLocation(), diag::err_odr_missing_attribute)
+          Diag2(D2->getLocation(), diag::err_odr_missing_attribute)
             << D2Attr;
-          Diag1(D1->getLocation(), diag::note_odr_attribute)
+          Diag1(D1->getLocation(), diag::note_odr_attribute_here)
             << D2Attr;
         }
       }

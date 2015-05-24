@@ -150,7 +150,7 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   Consumers.push_back(std::move(Consumer));
 
   for (size_t i = 0, e = CI.getFrontendOpts().AddPluginActions.size();
-       i != e; ++i) { 
+       i != e; ++i) {
     // This is O(|plugins| * |add_plugins|), but since both numbers are
     // way below 50 in practice, that's ok.
     for (FrontendPluginRegistry::iterator
@@ -185,8 +185,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (Input.getKind() == IK_AST) {
     assert(!usesPreprocessorOnly() &&
            "Attempt to pass AST file to preprocessor only action!");
-    assert(hasASTFileSupport() &&
-           "This action does not have AST file support!");
+
+    // FIXME: prograholic: Why do we need AST file support for running both -emit-pch and -ast-merge actions?
+    //assert(hasASTFileSupport() && "This action does not have AST file support!");
 
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
 
@@ -390,9 +391,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If there is a layout overrides file, attach an external AST source that
   // provides the layouts from that file.
-  if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() && 
+  if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() &&
       CI.hasASTContext() && !CI.getASTContext().getExternalSource()) {
-    IntrusiveRefCntPtr<ExternalASTSource> 
+    IntrusiveRefCntPtr<ExternalASTSource>
       Override(new LayoutOverrideSource(
                      CI.getFrontendOpts().OverrideRecordLayoutsFile));
     CI.getASTContext().setExternalSource(Override);

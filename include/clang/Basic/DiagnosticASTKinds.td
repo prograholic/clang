@@ -203,7 +203,14 @@ def err_odr_field_type_inconsistent : Error<
   "translation units (%1 vs. %2)">;
 
 def err_odr_missing_attribute : Error<"attribute %0 is missing">;
-def note_odr_attribute : Note<"attribute %0 here">;
+def err_odr_attribute_inconsistent : Error<"incompatible "
+  "attributes in different translation units (%1 vs. %2)">;
+def err_odr_max_field_alignment_attribute_inconsistent : Error<"type %0 "
+  "declared with incompatible %1 attribute value in different translation units "
+  "(%2 bits vs. %3 bits)">;
+
+// FIXME: prograholic: get attribute location instead of decl location
+def note_odr_attribute_here : Note<"attribute %0 here">;
 
 // Importing Objective-C ASTs
 def err_odr_ivar_type_inconsistent : Error<
