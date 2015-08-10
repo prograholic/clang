@@ -76,6 +76,8 @@ namespace clang {
     QualType VisitObjCInterfaceType(const ObjCInterfaceType *T);
     QualType VisitObjCObjectType(const ObjCObjectType *T);
     QualType VisitObjCObjectPointerType(const ObjCObjectPointerType *T);
+    QualType VisitAdjustedType(const AdjustedType *T);
+    QualType VisitDecayedType(const DecayedType *T);
 
     // Importing declarations
     bool ImportDeclParts(NamedDecl *D, DeclContext *&DC,
@@ -181,6 +183,7 @@ namespace clang {
     Expr *VisitCompoundAssignOperator(CompoundAssignOperator *E);
     Expr *VisitImplicitCastExpr(ImplicitCastExpr *E);
     Expr *VisitCStyleCastExpr(CStyleCastExpr *E);
+    Expr *VisitStringLiteral(StringLiteral* E);
   };
 }
 using namespace clang;
@@ -1873,6 +1876,24 @@ ASTNodeImporter::VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {
     return QualType();
 
   return Importer.getToContext().getObjCObjectPointerType(ToPointeeType);
+}
+
+QualType ASTNodeImporter::VisitAdjustedType(const AdjustedType *T)
+{
+    QualType OriginalType = Importer.Import(T->getOriginalType());
+    if (OriginalType.isNull())
+      return QualType();
+
+    return Importer.getToContext().getAdjustedType(OriginalType, T->getAdjustedType());
+}
+
+QualType ASTNodeImporter::VisitDecayedType(const DecayedType *T)
+{
+    QualType OriginalType = Importer.Import(T->getOriginalType());
+    if (OriginalType.isNull())
+      return QualType();
+
+    return Importer.getToContext().getDecayedType(OriginalType);
 }
 
 //----------------------------------------------------------------------------
@@ -4671,6 +4692,17 @@ Expr *ASTNodeImporter::VisitCStyleCastExpr(CStyleCastExpr *E) {
                                 SubExpr, &BasePath, TInfo,
                                 Importer.Import(E->getLParenLoc()),
                                 Importer.Import(E->getRParenLoc()));
+}
+
+Expr *ASTNodeImporter::VisitStringLiteral(StringLiteral* E)
+{
+    return StringLiteral::Create(Importer.getToContext(),
+                                 E->getBytes(),
+                                 E->getKind(),
+                                 E->isPascal(),
+                                 E->getType(),
+                                 E->tokloc_begin(),
+                                 E->tokloc_end() - E->tokloc_begin());
 }
 
 ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
