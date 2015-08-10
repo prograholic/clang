@@ -184,6 +184,7 @@ namespace clang {
     Expr *VisitImplicitCastExpr(ImplicitCastExpr *E);
     Expr *VisitCStyleCastExpr(CStyleCastExpr *E);
     Expr *VisitStringLiteral(StringLiteral* E);
+    Expr *VisitInitListExpr(InitListExpr* E);
   };
 }
 using namespace clang;
@@ -4694,15 +4695,64 @@ Expr *ASTNodeImporter::VisitCStyleCastExpr(CStyleCastExpr *E) {
                                 Importer.Import(E->getRParenLoc()));
 }
 
-Expr *ASTNodeImporter::VisitStringLiteral(StringLiteral* E)
-{
+Expr *ASTNodeImporter::VisitStringLiteral(StringLiteral* E) {
+
+    SmallVector<SourceLocation, 16> TokenLocations(E->getNumConcatenated());
+    for (unsigned i = 0; i != E->getNumConcatenated(); ++i) {
+        TokenLocations[i] = Importer.Import(E->getStrTokenLoc(i));
+    }
+
     return StringLiteral::Create(Importer.getToContext(),
                                  E->getBytes(),
                                  E->getKind(),
                                  E->isPascal(),
                                  E->getType(),
-                                 E->tokloc_begin(),
-                                 E->tokloc_end() - E->tokloc_begin());
+                                 TokenLocations.data(),
+                                 TokenLocations.size());
+}
+
+Expr *ASTNodeImporter::VisitInitListExpr(InitListExpr *E) {
+
+    Expr *ArrayFiller = nullptr;
+    FieldDecl *UnionFieldInit = nullptr;
+
+    if (E->hasArrayFiller()) {
+        ArrayFiller = Importer.Import(E->getArrayFiller());
+        if (!ArrayFiller) {
+            return nullptr;
+        }
+    } else {
+        UnionFieldInit = cast_or_null<FieldDecl>(Importer.Import(E->getInitializedFieldInUnion()));
+        if (!UnionFieldInit) {
+            return nullptr;
+        }
+    }
+
+    SmallVector<Expr*, 16> InitExprList(E->getNumInits());
+    for (unsigned i = 0; i != E->getNumInits(); ++i) {
+        if (Expr* ToInitExpr = Importer.Import(E->getInit(i))) {
+            InitExprList[i] = ToInitExpr;
+        } else {
+            return nullptr;
+        }
+    }
+
+    InitListExpr *ToExpr = new (Importer.getToContext()) InitListExpr(Importer.getToContext(),
+                                                                      Importer.Import(E->getLBraceLoc()),
+                                                                      ArrayRef<Expr*>(InitExprList.data(), InitExprList.size()),
+                                                                      Importer.Import(E->getRBraceLoc()));
+
+    if (ArrayFiller) {
+        assert(!UnionFieldInit && "should be either array filler or union field initializer");
+
+        ToExpr->setArrayFiller(ArrayFiller);
+    } else {
+        assert(UnionFieldInit && "should be either array filler or union field initializer");
+
+        ToExpr->setInitializedFieldInUnion(UnionFieldInit);
+    }
+
+    return ToExpr;
 }
 
 ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
